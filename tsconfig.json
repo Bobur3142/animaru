@@ -1,0 +1,16 @@
+{
+  "extends": "./.quasar/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "src/*": ["src/*"],
+
+      "pages/*": ["src/pages/*"],
+      "layouts/*": ["src/layouts/*"],
+      "components/*": ["src/components/*"],
+      "boot/*": ["src/boot/*"],
+      "stores/*": ["src/stores/*"],
+      "assets/*": ["src/assets/*"]
+    }
+  }
+}
