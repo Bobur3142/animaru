@@ -19,8 +19,7 @@
           <span><q-icon name="star" />{{ anime.rating.toFixed(1) }}</span>
           <span><q-icon name="calendar_today" size="16px" />{{ anime.year }}</span>
           <span><q-icon name="movie" size="16px" />{{ anime.type }}</span>
-          <span><q-icon name="schedule" size="16px" />{{ anime.duration }} {{ t('detail.min') }}</span>
-          <span><q-icon name="layers" size="16px" />{{ anime.episodes }} ep</span>
+          <span v-if="totalEpisodes"><q-icon name="layers" size="16px" />{{ totalEpisodes }} ep</span>
         </div>
 
         <div class="detail-tags">
@@ -42,7 +41,6 @@
             unelevated
             @click="toggle(anime.id)"
           />
-          <q-btn class="app-btn-ghost" icon="play_circle_outline" :label="t('detail.trailer')" unelevated />
           <q-btn class="app-btn-ghost" icon="share" unelevated />
         </div>
       </div>
@@ -55,73 +53,96 @@
         <p class="detail-synopsis">{{ anime.synopsis }}</p>
 
         <h3 class="font-display" style="margin-top: 2rem;">{{ t('detail.episodes') }}</h3>
-        <div class="episode-list">
-          <div
-            v-for="ep in episodes"
-            :key="ep.num"
-            class="ep-row"
-            @click="$router.push({ name: 'watch', params: { id: anime.id } })"
-          >
-            <div class="ep-row__num">{{ String(ep.num).padStart(2, '0') }}</div>
-            <div class="ep-row__thumb">
-              <img :src="anime.banner" :alt="ep.title" />
+
+        <!-- Загрузка серий -->
+        <div v-if="mediaLoading" class="flex justify-center" style="padding: 2rem;">
+          <q-spinner color="primary" size="32px" />
+        </div>
+
+        <template v-else>
+          <div v-for="season in media?.seasons" :key="season.season">
+            <div v-if="media?.seasons && media.seasons.length > 1" class="season-title">
+              {{ season.season }}
             </div>
-            <div>
-              <div class="ep-row__title">{{ ep.title }}</div>
-              <div class="ep-row__sub">{{ anime.year }} · {{ anime.studio }}</div>
-            </div>
-            <div class="ep-row__dur">
-              <q-icon name="schedule" size="14px" /> {{ anime.duration }}:00
+            <div class="episode-list">
+              <div
+                v-for="ep in season.episodes"
+                :key="ep.id"
+                class="ep-row"
+                @click="$router.push({ name: 'watch', params: { id: anime.id }, query: { ep: ep.id } })"
+              >
+                <div class="ep-row__num">{{ String(ep.episode).padStart(2, '0') }}</div>
+                <div class="ep-row__thumb">
+                  <img :src="anime.banner" :alt="ep.title" />
+                </div>
+                <div>
+                  <div class="ep-row__title">{{ ep.title }}</div>
+                  <div class="ep-row__sub">{{ anime.year }}</div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </template>
       </div>
 
       <aside class="detail-side">
         <h3 class="font-display">{{ t('detail.info') }}</h3>
         <dl>
-          <dt>{{ t('detail.studio') }}</dt>
-          <dd>{{ anime.studio }}</dd>
           <dt>{{ t('detail.type') }}</dt>
           <dd>{{ anime.type }}</dd>
-          <dt>{{ t('detail.status') }}</dt>
-          <dd>{{ anime.status === 'ongoing' ? t('filters.ongoing') : t('filters.completed') }}</dd>
           <dt>{{ t('detail.year') }}</dt>
           <dd>{{ anime.year }}</dd>
-          <dt>{{ t('detail.episodes_count') }}</dt>
-          <dd>{{ anime.episodes }}</dd>
-          <dt>{{ t('detail.duration') }}</dt>
-          <dd>{{ anime.duration }} {{ t('detail.min') }}</dd>
+          <template v-if="totalEpisodes">
+            <dt>{{ t('detail.episodes_count') }}</dt>
+            <dd>{{ totalEpisodes }}</dd>
+          </template>
         </dl>
       </aside>
     </div>
   </div>
+
+  <!-- Загрузка страницы -->
+  <div v-else class="flex justify-center items-center" style="height: 400px;">
+    <q-spinner color="primary" size="48px" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { getAnimeById, useFavorites } from 'src/composables/useAnime';
+import { getAnimeById, fetchCatalog, fetchMedia, useFavorites, type DriveMedia } from 'src/composables/useAnime';
 
 const route = useRoute();
 const { t } = useI18n();
 const { isFav, toggle } = useFavorites();
 
+const media = ref<DriveMedia | null>(null);
+const mediaLoading = ref(false);
+
 const anime = computed(() => getAnimeById(route.params.id as string));
 
-const epTitlePool = [
-  'A Quiet Beginning', 'The First Light', 'Crossroads', 'Echoes from Below',
-  'The Long Walk Home', 'Memory of Iron', 'Promises in the Rain',
-  'What the Wind Remembers', 'The Last Lantern', 'A Smaller, Truer World',
-  'The Crow That Wouldn\'t Speak', 'After the Bell',
-];
-
-const episodes = computed(() => {
-  if (!anime.value) return [];
-  return Array.from({ length: Math.min(anime.value.episodes, 12) }, (_, i) => ({
-    num: i + 1,
-    title: epTitlePool[i % epTitlePool.length],
-  }));
+const totalEpisodes = computed(() => {
+  if (!media.value) return 0;
+  return media.value.seasons.reduce((sum, s) => sum + s.episodes.length, 0);
 });
+
+async function loadMedia() {
+  if (!anime.value) return;
+  mediaLoading.value = true;
+  try {
+    media.value = await fetchMedia(anime.value.folderId);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    mediaLoading.value = false;
+  }
+}
+
+onMounted(async () => {
+  await fetchCatalog();
+  await loadMedia();
+});
+
+watch(() => route.params.id, loadMedia);
 </script>

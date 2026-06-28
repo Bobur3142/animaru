@@ -139,7 +139,7 @@ const sortOptions = computed(() => [
 ]);
 
 const filtered = computed(() => {
-  let res = animeList.slice();
+  let res = animeList.value.slice();
   if (filters.genre)  res = res.filter((a) => a.genres.includes(filters.genre!));
   if (filters.type)   res = res.filter((a) => a.type === filters.type);
   if (filters.status) res = res.filter((a) => a.status === filters.status);

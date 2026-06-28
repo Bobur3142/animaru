@@ -70,6 +70,7 @@
           <span class="text-base">{{ current.flag }}</span>
           <q-menu class="app-menu" :offset="[0, 8]" anchor="bottom right" self="top right">
             <q-list style="min-width: 180px">
+              {{locale}}
               <q-item
                 v-for="opt in options"
                 :key="opt.code"

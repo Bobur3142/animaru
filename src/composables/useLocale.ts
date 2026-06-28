@@ -4,8 +4,8 @@ import { useI18n } from 'vue-i18n';
 const STORAGE_KEY = 'locale';
 
 export const SUPPORTED_LOCALES = [
-  { code: 'uz', label: "O'zbek", flag: '🇺🇿' },
   { code: 'ru', label: 'Русский', flag: '🇷🇺' },
+  { code: 'uz', label: "O'zbek", flag: '🇺🇿' },
   { code: 'en', label: 'English', flag: '🇬🇧' },
 ] as const;
 
